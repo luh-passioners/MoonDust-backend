@@ -1,3 +1,5 @@
 flask
 pymongo[srv]
 flask_cors
+flask-jwt-extended
+passlib
