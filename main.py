@@ -27,10 +27,18 @@ def signup():
 
   hashed = keys.hash(password)
 
-  res = get_collection("users").insert_one({
+  user_data = {
     "username": username,
+    "name": request.json.get("name"),
     "hashed": hashed,
-  })
+    "company": request.json.get("company"), # company name
+    "type": request.json.get("type"), # "full" | "org"
+  }
+
+  if user_data == "org":
+    user_data["org_id"] = ObjectId(request.json.get("org_id"))
+
+  res = get_collection("users").insert_one(user_data)
 
   id = str(res.inserted_id)
   access_token = create_access_token(id)
@@ -52,7 +60,6 @@ def login():
   if len(match_list) != 1:
     return jsonify({
       "success": False,
-      "meow": len(match_list)
     })
   
   match = match_list[0]
@@ -73,12 +80,21 @@ def login():
 @app.route(r("/transactions"), methods=["GET"])
 @jwt_required()
 def get_transactions():
-  current_user = get_jwt_identity()
-  trans = get_collection("transactions").find({ "user_id": ObjectId(current_user) })
+  current_user = ObjectId(get_jwt_identity())
+
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1: # fake jwt
+    return jsonify({
+      "success": False,
+    })
+  user = match_list[0]
+  trans = get_collection("transactions").find({ "company": user["company"] })
   
   jsonable_trans = [{
     "_id": str(item["_id"]),
-    "names": item["name"],
+    "name": item["name"],
+    "company": item["company"],
     "org_id": item["org_id"],
     "date": item["date"],
     "amount": item["amount"]
@@ -90,11 +106,19 @@ def get_transactions():
 @app.route(r("/transactions"), methods=["POST"])
 @jwt_required()
 def add_transaction():
-  current_user = get_jwt_identity()
+  current_user = ObjectId(get_jwt_identity())
+  
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1:
+    return jsonify({
+      "success": False,
+    })
+  user = match_list[0]
 
   new_trans = {
     "name": request.json.get("name"),
-    "user_id": ObjectId(current_user),
+    "company": user["company"],
     "org_id": ObjectId(request.json.get("org_id")),
     "date": request.json.get("date"),
     "amount": request.json.get("amount"),
@@ -102,6 +126,64 @@ def add_transaction():
 
   return jsonify({
     "_id": str(get_collection("transactions").insert_one(new_trans).inserted_id)
+  })
+
+# GET: all orgs
+@app.route(r("/orgs"), methods=["GET"])
+@jwt_required()
+def get_orgs():
+  current_user = ObjectId(get_jwt_identity())
+
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1: # fake jwt
+    return jsonify({
+      "success": False,
+      "meow": current_user
+    })
+  user = match_list[0]
+
+  company = user["company"]
+  orgs = get_collection("orgs")
+  orgs_cursor = orgs.find({ "company": company })
+  org_map = {}
+
+  for org in orgs_cursor:
+    org_map[str(org["id"])] = org["name"]
+
+  return jsonify({
+    "success": True,
+    "org_map": org_map
+  })
+
+# POST: create org
+@app.route(r("/orgs"), methods=["POST"])
+@jwt_required()
+def add_org():
+  current_user = ObjectId(get_jwt_identity())
+
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1: # fake jwt
+    return jsonify({
+      "success": False,
+      "meow": current_user
+    })
+  user = match_list[0]
+
+  if user["type"] != "full": # access level too little
+    return jsonify({
+      "success": False
+    })
+
+  res = get_collection("orgs").insert_one({
+    "company": user["company"],
+    "name": request.json.get("name")
+  })
+
+  return jsonify({
+    "success": True,
+    "_id": str(res.inserted_id)
   })
 
 if __name__ == '__main__':
