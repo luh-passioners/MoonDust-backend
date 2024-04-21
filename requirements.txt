@@ -5,3 +5,11 @@ flask-jwt-extended
 passlib
 yfinance
 pandas
+transformers
+bs4
+scipy
+anthropic
+numpy
+newspaper3k
+lxml[html_clean]
+torch

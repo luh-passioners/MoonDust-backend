@@ -274,6 +274,10 @@ def add_position():
     "success": True
   }), 201
 
+# GET: recommendations
+# @app.route(r("/recommendations"), method=["GET"])
+# def get_recommendations():
+#   tickers = recommend_positions()
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080)

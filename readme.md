@@ -5,7 +5,7 @@
 1. `python -m venv env`
 2. `./env/Scripts/Activate` or whatever MEOW
 3. `pip install -r requirements.txt`!
-4. clone the ML repo into the project root
+4. clone the ML repo into the project root RENAME TO `fms_machinelearning`
 
 ## keys.py
 
