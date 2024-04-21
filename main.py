@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from db import get_collection
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 from bson.objectid import ObjectId
+
+from db import get_collection
 import keys
+import utils
 
 app = Flask(__name__)
 
@@ -202,6 +204,43 @@ def add_org():
     "success": True,
     "_id": str(res.inserted_id)
   }), 201
+
+# GET: portfolio positions
+@app.route(r("/positions"), methods=["GET"])
+@jwt_required()
+def get_positions():
+  current_user = ObjectId(get_jwt_identity())
+
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1: # fake jwt
+    return jsonify({
+      "success": False,
+    }), 403
+  user = match_list[0]
+
+  if user["type"] != "full": # no access
+    return jsonify({
+      "success": False,
+    }), 403
+
+  position_cursor = get_collection("positions").find({ "company": user["company"] })
+  positions = []
+  
+  for pos in position_cursor:
+    pos["_id"] = str(pos["_id"])
+    positions.append(pos)
+
+  stock_ranges = {}
+
+  for pos in positions:
+    stock_ranges[pos["ticker"]] = utils.get_stock_prices(pos["ticker"], pos["startDate"])
+
+  return jsonify({
+    "success": True,
+    "positions": positions,
+    "ranges": stock_ranges, 
+  })
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080)

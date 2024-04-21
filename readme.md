@@ -1,8 +1,11 @@
 # backend
 
+## setup
+ 
 1. `python -m venv env`
 2. `./env/Scripts/Activate` or whatever MEOW
 3. `pip install -r requirements.txt`!
+4. clone the ML repo into the project root
 
 ## keys.py
 
@@ -36,3 +39,12 @@ collection `transaction`:
 collections `orgs`:
 - company
 - name
+
+collection `positions`:
+- company
+- ticker
+- shares
+- start_date
+- active
+- end_date? (if active == false)
+- net_change? (if active == false)
