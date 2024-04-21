@@ -232,15 +232,48 @@ def get_positions():
     positions.append(pos)
 
   stock_ranges = {}
+  full_names = {}
 
   for pos in positions:
     stock_ranges[pos["ticker"]] = utils.get_stock_prices(pos["ticker"], pos["startDate"])
+
+  for pos in positions:
+    full_names[pos["ticker"]] = utils.get_company_name(pos["ticker"])
 
   return jsonify({
     "success": True,
     "positions": positions,
     "ranges": stock_ranges, 
+    "names": full_names,
   })
+
+# POST: add position
+@app.route(r("/positions"), methods=["POST"])
+@jwt_required()
+def add_position():
+  current_user = ObjectId(get_jwt_identity())
+  
+  match_cursor = get_collection("users").find({ "_id": current_user })
+  match_list = [match for match in match_cursor]
+  if len(match_list) != 1:
+    return jsonify({
+      "success": False,
+    }), 403
+  user = match_list[0]
+
+  new_pos = {
+    "company": user["company"],
+    "ticker": request.json.get("ticker"),
+    "shares": request.json.get("shares"),
+    "initialPrice": request.json.get("initialPrice"),
+    "startDate": request.json.get("startDate"),
+  }
+
+  return jsonify({
+    "_id": str(get_collection("positions").insert_one(new_pos).inserted_id),
+    "success": True
+  }), 201
+
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080)

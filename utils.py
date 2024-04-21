@@ -53,6 +53,14 @@ def get_stock_prices(symbol, start_date):
             prices.append({ "date": date, "price": price })
     return prices
 
+def get_company_name(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        company_name = stock.info['longName']
+        return company_name
+    except:
+        return ticker
+
 # def main():
 #     symbol = input("Enter stock symbol: ")
 #     start_date = input("Enter start date (YYYY-MM-DD): ")
