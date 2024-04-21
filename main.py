@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, JWTManager
 from bson.objectid import ObjectId
+from ml_rec import recommend_positions
 
 from db import get_collection
 import keys
@@ -275,9 +276,13 @@ def add_position():
   }), 201
 
 # GET: recommendations
-# @app.route(r("/recommendations"), method=["GET"])
-# def get_recommendations():
-#   tickers = recommend_positions()
+@app.route(r("/recommendations"), methods=["GET"])
+def get_recommendations():
+  tickers = recommend_positions()
+  return jsonify({
+    "tickers": tickers,
+    "success": True
+  })
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080)
