@@ -107,10 +107,13 @@ def get_transactions():
     "_id": str(item["_id"]),
     "name": item["name"],
     "company": item["company"],
-    "org_id": item["org_id"],
+    "org_id": str(item["org_id"]),
     "date": item["date"],
     "amount": item["amount"]
   } for item in trans]
+
+  if user["type"] == "org":
+    jsonable_trans = filter(lambda tr: tr.org_id == user["org_id"], jsonable_trans)
 
   return jsonify(jsonable_trans), 200
 
