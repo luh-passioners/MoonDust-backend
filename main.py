@@ -38,19 +38,23 @@ def signup():
     if user_data == "org":
       user_data["org_id"] = ObjectId(request.json.get("org_id"))
 
-    res = get_collection("users").insert_one(user_data)
+    get_collection("users").insert_one(user_data)
+    user_data["_id"] = str(user_data["_id"])
+    access_token = create_access_token(user_data["_id"])
 
-    id = str(res.inserted_id)
-    access_token = create_access_token(id)
+    if "org_id" in user_data:
+      user_data["org_id"] = str(user_data["org_id"])
 
     return jsonify({
       "success": True,
       "token": access_token,
       "user": user_data
-    })
-  except:
+    }), 201
+  except Exception as ex:
+    
     return jsonify({
-      "success": False
+      "success": False,
+      "error": str(ex),
     }), 500
 
 # POST: login
