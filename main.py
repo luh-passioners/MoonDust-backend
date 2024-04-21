@@ -18,34 +18,40 @@ API_PREFIX = "/api/v1"
 def r(endpoint):
   return f"{API_PREFIX}{endpoint}"
 
-
 # POST: signup
 @app.route(r("/signup"), methods=["POST"])
 def signup():
-  username = request.json.get("username")
-  password = request.json.get("password")
+  try:
+    username = request.json.get("username")
+    password = request.json.get("password")
 
-  hashed = keys.hash(password)
+    hashed = keys.hash(password)
 
-  user_data = {
-    "username": username,
-    "name": request.json.get("name"),
-    "hashed": hashed,
-    "company": request.json.get("company"), # company name
-    "type": request.json.get("type"), # "full" | "org"
-  }
+    user_data = {
+      "username": username,
+      "name": request.json.get("name"),
+      "hashed": hashed,
+      "company": request.json.get("company"), # company name
+      "type": request.json.get("type"), # "full" | "org"
+    }
 
-  if user_data == "org":
-    user_data["org_id"] = ObjectId(request.json.get("org_id"))
+    if user_data == "org":
+      user_data["org_id"] = ObjectId(request.json.get("org_id"))
 
-  res = get_collection("users").insert_one(user_data)
+    res = get_collection("users").insert_one(user_data)
 
-  id = str(res.inserted_id)
-  access_token = create_access_token(id)
+    id = str(res.inserted_id)
+    access_token = create_access_token(id)
 
-  return jsonify({
-    "token": access_token
-  })
+    return jsonify({
+      "success": True,
+      "token": access_token,
+      "user": user_data
+    })
+  except:
+    return jsonify({
+      "success": False
+    }), 500
 
 # POST: login
 @app.route(r("/login"), methods=["POST"])
@@ -60,21 +66,23 @@ def login():
   if len(match_list) != 1:
     return jsonify({
       "success": False,
-    })
+    }), 403
   
   match = match_list[0]
+  match["_id"] = str(match["_id"])
 
   if keys.hash(password) == match["hashed"]:
-    access_token = create_access_token(str(match["_id"]))
+    access_token = create_access_token(match["_id"])
 
     return jsonify({
       "success": True,
-      "token": access_token
-    })
+      "token": access_token,
+      "user": match
+    }), 201
   
   return jsonify({
     "success": False,
-  })
+  }), 500
 
 # GET: all transactions
 @app.route(r("/transactions"), methods=["GET"])
@@ -87,7 +95,7 @@ def get_transactions():
   if len(match_list) != 1: # fake jwt
     return jsonify({
       "success": False,
-    })
+    }), 403
   user = match_list[0]
   trans = get_collection("transactions").find({ "company": user["company"] })
   
@@ -100,7 +108,7 @@ def get_transactions():
     "amount": item["amount"]
   } for item in trans]
 
-  return jsonify(jsonable_trans)
+  return jsonify(jsonable_trans), 200
 
 # POST: add a transaction
 @app.route(r("/transactions"), methods=["POST"])
@@ -113,7 +121,7 @@ def add_transaction():
   if len(match_list) != 1:
     return jsonify({
       "success": False,
-    })
+    }), 403
   user = match_list[0]
 
   new_trans = {
@@ -126,7 +134,7 @@ def add_transaction():
 
   return jsonify({
     "_id": str(get_collection("transactions").insert_one(new_trans).inserted_id)
-  })
+  }), 201
 
 # GET: all orgs
 @app.route(r("/orgs"), methods=["GET"])
@@ -139,8 +147,7 @@ def get_orgs():
   if len(match_list) != 1: # fake jwt
     return jsonify({
       "success": False,
-      "meow": current_user
-    })
+    }), 403
   user = match_list[0]
 
   company = user["company"]
@@ -154,7 +161,7 @@ def get_orgs():
   return jsonify({
     "success": True,
     "org_map": org_map
-  })
+  }), 201
 
 # POST: create org
 @app.route(r("/orgs"), methods=["POST"])
@@ -167,14 +174,13 @@ def add_org():
   if len(match_list) != 1: # fake jwt
     return jsonify({
       "success": False,
-      "meow": current_user
-    })
+    }), 403
   user = match_list[0]
 
   if user["type"] != "full": # access level too little
     return jsonify({
       "success": False
-    })
+    }), 403
 
   res = get_collection("orgs").insert_one({
     "company": user["company"],
@@ -184,7 +190,7 @@ def add_org():
   return jsonify({
     "success": True,
     "_id": str(res.inserted_id)
-  })
+  }), 201
 
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8080)
