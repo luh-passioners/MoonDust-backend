@@ -113,9 +113,11 @@ def get_transactions():
   } for item in trans]
 
   if user["type"] == "org":
-    jsonable_trans = filter(lambda tr: tr.org_id == user["org_id"], jsonable_trans)
+    jsonable_trans = filter(lambda tr: tr["org_id"] == str(user["org_id"]), jsonable_trans)
 
-  return jsonify(jsonable_trans), 200
+  print(jsonable_trans)
+
+  return jsonify({ "success": True, "transactions": jsonable_trans }), 200
 
 # POST: add a transaction
 @app.route(r("/transactions"), methods=["POST"])
@@ -140,7 +142,8 @@ def add_transaction():
   }
 
   return jsonify({
-    "_id": str(get_collection("transactions").insert_one(new_trans).inserted_id)
+    "_id": str(get_collection("transactions").insert_one(new_trans).inserted_id),
+    "success": True
   }), 201
 
 # GET: all orgs
@@ -160,14 +163,15 @@ def get_orgs():
   company = user["company"]
   orgs = get_collection("orgs")
   orgs_cursor = orgs.find({ "company": company })
-  org_map = {}
+  orgs_list = []
 
   for org in orgs_cursor:
-    org_map[str(org["id"])] = org["name"]
+    org["_id"] = str(org["_id"])
+    orgs_list.append(org)
 
   return jsonify({
     "success": True,
-    "org_map": org_map
+    "orgs": orgs_list
   }), 201
 
 # POST: create org
